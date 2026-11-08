@@ -31,13 +31,13 @@ class LinearProbingHashTable:
     def __init__(self, size, base, max_load_factor):
         if size < 1 or base < 2 or not 0 < max_load_factor < 1:
             raise ValueError("Need size >= 1, base >= 2 and 0 < max_load_factor < 1")
-        self.size = size                        # Number of slots (a prime spreads keys best)
-        self.base = base                        # Multiplier used by the hash function
+        self.size = size  # Number of slots (a prime spreads keys best)
+        self.base = base  # Multiplier used by the hash function
         self.max_load_factor = max_load_factor  # How full the table may get before it grows
-        self.count = 0                          # Number of stored items
-        self.tombstones = 0                     # Number of deleted slots
-        self.table = [None] * size              # Each slot: None or (key, value)
-        self.deleted = [False] * size           # True where an item was deleted
+        self.count = 0  # Number of stored items
+        self.tombstones = 0  # Number of deleted slots
+        self.table = [None] * size  # Each slot: None or (key, value)
+        self.deleted = [False] * size  # True where an item was deleted
 
     # ==================================================================
     # Public operations
@@ -49,17 +49,17 @@ class LinearProbingHashTable:
         Before storing, the table grows if it is too full of real items, or is rebuilt
         if deleted slots are making searches long.
         """
-        if self.search(key) is not None:  # Duplicate key
+        if self.search_for_key(key) is not None:  # Duplicate key
             return -1
 
-        if self.load_factor(extra=1) >= self.max_load_factor: # Extra refers to pending item
+        if self.load_factor(extra=1) >= self.max_load_factor:  # Extra refers to pending item
             self._resize(next_prime(self.size * 2))  # Too many real items: grow, e.g. 101 → 211
         elif self.occupancy(extra=1) >= self.max_load_factor:
             self._resize(self.size)  # Too many deleted slots: rebuild at the same size
 
         return self._place(key, value)
 
-    def search(self, key):
+    def search_for_key(self, key):
         """Return the value stored for key, or None if it is not found.
 
         May move the key into an earlier deleted slot so later searches are shorter.
@@ -67,12 +67,10 @@ class LinearProbingHashTable:
         index = self._find_slot(key)  # Probe for the key's slot
         return None if index is None else self.table[index][self.VALUE]
 
-    def search_with_slot(self, key):
+    def search_for_slot(self, key):
         """Return (slot index, value) for key, or (None, None) if it is not found."""
         index = self._find_slot(key)
-        if index is None:
-            return None, None
-        return index, self.table[index][self.VALUE]
+        return (None, None) if index is None else (index, self.table[index][self.VALUE])
 
     def delete(self, key):
         """Remove key, leaving a tombstone. Return True if removed, False if not found.
@@ -117,6 +115,10 @@ class LinearProbingHashTable:
             hash_value = (hash_value * self.base + ord(ch)) % self.size
         return (hash_value * self.base) % self.size
 
+    def _linear_probing(self, index):
+        """Return the next slot after index, wrapping back to slot 0 (linear probing)."""
+        return (index + 1) % self.size
+
     def _find_slot(self, key):
         """Return the index of the slot holding key, or None if it is not found.
 
@@ -145,7 +147,7 @@ class LinearProbingHashTable:
                     return first_tombstone
                 return index
 
-            index = (index + 1) % size  # Probe the next slot
+            index = self._linear_probing(index)  # Probe the next slot
             counter += 1
 
         return None
@@ -154,7 +156,7 @@ class LinearProbingHashTable:
         """Put the pair in the first free slot from its home slot (no checks)."""
         index = self._hash_function(key)
         while self.table[index] is not None:
-            index = (index + 1) % self.size  # Slot taken: try the next one, wrapping around
+            index = self._linear_probing(index)  # Slot taken: try the next one, wrapping around
 
         if self.deleted[index]:  # Reusing a tombstone
             self.tombstones -= 1
@@ -175,4 +177,3 @@ class LinearProbingHashTable:
         self.tombstones = 0
         for key, value in items:
             self._place(key, value)
-

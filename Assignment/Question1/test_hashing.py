@@ -1,34 +1,69 @@
-"""Quick checks that the hash table inserts, finds, rejects duplicates, grows and deletes correctly."""
-from hashing import LinearProbingHashTable
+"""Compares hash table and 1D array search times on small, intermediate and large datasets."""
+import benchmark
+import constants
+import display
+import hashing
+import one_dimensional_array
+import product
 
-table = LinearProbingHashTable(7, 37, 0.7)  # Small table so collisions are easy to see
 
-print("=== Home slots ===")
-for key in ["PR0001", "DG0001", "PR0003", "CC0001"]:
-    print(key, "->", table.home_slot(key))
+def build_records(record_count):
+    """Return record_count (ID, medicine) pairs: sample medicines first, then generated ones."""
+    records = [(record[0], product.OTCMedicine(*record))
+               for record in constants.PRELOADED_MEDICINES]
+    used_ids = {medicine_id for medicine_id, _ in records}
 
-print("\n=== Insert ===")
-for key, name in [("PR0001", "Panadol"), ("DG0001", "Gaviscon"),
-                  ("PR0003", "Nurofen"), ("CC0001", "Strepsils")]:
-    print(key, "-> slot", table.insert(key, name))
-print("Table size:", table.size, "| Load factor:", round(table.load_factor(), 2))
+    for number in range(1, 10 ** constants.NUMBER_LENGTH):
+        for code in constants.CATEGORY_CODES:
+            if len(records) >= record_count:
+                return records[:record_count]
+            medicine_id = f"{code}{number:0{constants.NUMBER_LENGTH}d}"
+            if medicine_id not in used_ids:  # Skip IDs already used by the sample medicines
+                records.append((medicine_id, product.OTCMedicine(
+                    medicine_id, f"Test Medicine {len(records) + 1}", "1 pc", 1.00, 1)))
+    return records[:record_count]
 
-print("\n=== Search ===")
-for key in ["PR0001", "DG0001", "CC0001", "XX9999"]:
-    print(key, ":", table.search(key))
 
-print("\n=== Duplicate ===")
-print("Insert PR0001 again ->", table.insert("PR0001", "Copy"), "(expected -1)")
+def load_structures(records):
+    """Insert the same records, in the same order, into a new hash table and a new 1D array.
 
-print("\n=== Growing ===")
-print("5th insert would pass the 0.7 limit, so the table grows first")
-print("AL0001 -> slot", table.insert("AL0001", "Zyrtec"))
-print("Table size:", table.size, "(was 7) | Load factor:", round(table.load_factor(), 2))
-print("All keys still found:",
-      all(table.search(k) is not None for k in ["PR0001", "DG0001", "PR0003", "CC0001", "AL0001"]))
+    Return (table, array, sizes), where sizes lists every size the table had, from first to last.
+    """
+    table = hashing.LinearProbingHashTable(
+        constants.HASH_TABLE_SIZE, constants.HASH_BASE, constants.MAX_LOAD_FACTOR)
+    array = one_dimensional_array.OneDimensionalArray()
+    sizes = [table.size]
 
-print("\n=== Tombstone ===")
-print("Delete PR0001 ->", table.delete("PR0001"))
-print("Search PR0001 :", table.search("PR0001"), "(expected None)")
-print("Search DG0001 :", table.search("DG0001"), "(still found)")
-print("Tombstones:", table.tombstones)
+    for medicine_id, medicine in records:
+        table.insert(medicine_id, medicine)
+        array.insert(medicine_id, medicine)
+        if table.size != sizes[-1]:  # The table resized during this insert
+            sizes.append(table.size)
+    return table, array, sizes
+
+
+def search_cases(records):
+    """Return the IDs to search: the first, middle and last in the array, and a missing one."""
+    return [("First", records[0][0]),
+            ("Middle", records[len(records) // 2][0]),
+            ("Last", records[-1][0]),
+            ("Missing", constants.MISSING_ID)]
+
+
+def run_experiment():
+    """Time every search case in both structures for each dataset size, and show the results."""
+    repeats = constants.SEARCH_REPEATS
+    for record_count in constants.DATASET_SIZES:
+        records = build_records(record_count)
+        table, array, sizes = load_structures(records)
+        display.print_dataset_header(record_count, table.size, table.load_factor(), sizes)
+
+        for position, medicine_id in search_cases(records):
+            hash_time = benchmark.average_search_time(table.search_for_key, medicine_id, repeats)
+            array_time = benchmark.average_search_time(array.search, medicine_id, repeats)
+            display.print_search_row(position, medicine_id, hash_time, array_time)
+    display.print_speed_up_note()
+
+
+if __name__ == "__main__":
+    run_experiment()

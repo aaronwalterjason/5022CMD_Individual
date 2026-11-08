@@ -1,6 +1,7 @@
 """Everything the user sees on screen: menus, tables, messages and results."""
-import constants
+import textwrap
 
+import constants
 
 def print_menu():
     """Show the main menu."""
@@ -52,6 +53,34 @@ def print_search_times(hash_time, array_time, record_count):
     print(f"  {'Hash Table':<10} : {hash_time:>10,.0f} ns")
     print(f"  {'1D Array':<10} : {array_time:>10,.0f} ns")
 
+def print_dataset_header(record_count, table_size, load_factor, sizes):
+    """Show one dataset's size, how full its hash table ended up, and how the table grew."""
+    print_title(f"{record_count:,} Records")
+    print(f"Hash table size : {table_size:,} slots (load factor {load_factor:.2f})")
+    print(f"Resizes         : {len(sizes) - 1}")
+    if len(sizes) > 1:  # Only show the growth when the table actually grew
+        growth = " -> ".join(f"{size:,}" for size in sizes)
+        print(textwrap.fill(growth, constants.DISPLAY_WIDTH,
+                            initial_indent="Growth          : ", subsequent_indent=" " * 18))
+    _print_line()
+    print(f"{'Position':<{constants.POSITION_WIDTH}}{'ID':<{constants.ID_WIDTH}}"
+          f"{'Hash (ns)':>{constants.TIME_WIDTH}}{'Array (ns)':>{constants.TIME_WIDTH}}"
+          f"{'Speed-up':>{constants.SPEED_UP_WIDTH}}")
+    _print_line()
+
+
+def print_search_row(position, medicine_id, hash_time, array_time):
+    """Show one search's average time in both structures, and the speed-up of the table."""
+    speed_up = f"{array_time / hash_time:,.1f}x"
+    print(f"{position:<{constants.POSITION_WIDTH}}{medicine_id:<{constants.ID_WIDTH}}"
+          f"{hash_time:>{constants.TIME_WIDTH},.0f}{array_time:>{constants.TIME_WIDTH},.0f}"
+          f"{speed_up:>{constants.SPEED_UP_WIDTH}}")
+
+
+def print_speed_up_note():
+    """Explain how to read the Speed-up column."""
+    print("\nSpeed-up = 1D array time / hash table time.")
+    print("Below 1.0x means the 1D array was faster for that search.")
 
 def print_error(text):
     """Show an error with blank lines around it, so it stands out."""

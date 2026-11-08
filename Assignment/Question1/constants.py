@@ -93,3 +93,11 @@ LABEL_WIDTH = 15
 
 # Benchmark
 SEARCH_REPEATS = 10000
+
+# Search experiment
+DATASET_SIZES = (60, 5000, 50000)  # Small (the sample medicines), intermediate, large
+MISSING_ID = "PR0000"  # Never stored, since item numbers start from 0001
+POSITION_WIDTH = 9
+ID_WIDTH = 8
+TIME_WIDTH = 12
+SPEED_UP_WIDTH = 9

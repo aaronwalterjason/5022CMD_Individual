@@ -143,12 +143,12 @@ class InventorySystem:
 
     def _id_exists(self, medicine_id):
         """Return True if medicine_id is already in the inventory."""
-        return self.table.search(medicine_id) is not None
+        return self.table.search_for_key(medicine_id) is not None
 
     def _find_medicine(self):
         """Ask for an ID and return the matching medicine, or None if it doesn't exist."""
         medicine_id = prompts.prompt_id()
-        slot, medicine = self.table.search_with_slot(medicine_id)
+        slot, medicine = self.table.search_for_slot(medicine_id)
         if medicine is None:
             display.print_error(f"Medicine {medicine_id} does not exist.")
             return None
@@ -184,6 +184,6 @@ class InventorySystem:
     def _compare_search_times(self, medicine_id):
         """Time the same search in the hash table and the 1D array, then show both."""
         repeats = constants.SEARCH_REPEATS
-        hash_time = benchmark.average_search_time(self.table.search, medicine_id, repeats)
+        hash_time = benchmark.average_search_time(self.table.search_for_key, medicine_id, repeats)
         array_time = benchmark.average_search_time(self.array.search, medicine_id, repeats)
         display.print_search_times(hash_time, array_time, len(self.array))
